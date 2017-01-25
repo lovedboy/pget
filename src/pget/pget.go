@@ -112,11 +112,13 @@ func (d *download) Start() {
 	d.dispatch()
 	g.Info("download finish")
 	if d.th != nil {
-		if d.uploadTime > 0 {
+		go func() {
 			time.Sleep(time.Duration(d.uploadTime * 1e9))
-		}
+			close(d.closeServer)
+
+		}()
+		<-d.closeServer
 		g.Info("close http server")
-		close(d.closeServer)
 		d.httpWg.Wait()
 	}
 }
@@ -313,9 +315,6 @@ func (d *download) httpServer() {
 
 func (d *download) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	d.httpWg.Add(1)
-	defer d.httpWg.Done()
-
 	select {
 	case <-d.closeServer:
 		g.Info("receive close singal, will return")
@@ -324,6 +323,9 @@ func (d *download) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	default:
 	}
+
+	d.httpWg.Add(1)
+	defer d.httpWg.Done()
 
 	if d.uploadRateLimit != nil && d.uploadRateLimit.Available() < d.uploadRate/3 {
 		g.Warning("i'm full, so return 500")
