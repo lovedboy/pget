@@ -1,8 +1,8 @@
 export GOPATH=$(PWD)
 
 
-MODULES := pget
-BIN := pget
+MODULES := pget tracker logger
+BIN := pget tracker
 
 vendor:
 	for m in $(MODULES) ; do \
