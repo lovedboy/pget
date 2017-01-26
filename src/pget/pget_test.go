@@ -24,6 +24,7 @@ func runTestTrackerServer() {
 	defer lock.Unlock()
 	if !testServerRunning {
 		go gt.Server()
+		go http.ListenAndServe("localhost:33345", http.FileServer(http.Dir("/tmp")))
 		time.Sleep(time.Duration(1e8))
 		testServerRunning = true
 	}
@@ -176,11 +177,27 @@ func TestDownload_downloadBatch(t *testing.T) {
 	assert.Equal(t, string(buf), "hello,world")
 }
 
+func TestDownload_downloadBatch2(t *testing.T) {
+	runTestTrackerServer()
+	f, _ := os.Create("/tmp/source")
+	f.WriteString("hello,world")
+	f.Close()
+	defer os.Remove("/tmp/source")
+	dst := "/tmp/pget"
+	defer os.Remove(dst)
+	d := NewDownload("http://localhost:33345/source", "", dst, 1, "", 11, false, 0, 3)
+	d.getSize()
+	assert.Equal(t, d.size, int64(11))
+	d.genBatch()
+	err := d.downloadBatch(d.sourceURL, 0)
+	assert.NoError(t, err)
+	buf, _ := ioutil.ReadFile(dst)
+	assert.Equal(t, string(buf), "hello,world")
+}
+
 func TestDownload_Start(t *testing.T) {
 
-	go func() {
-		panic(http.ListenAndServe(":33345", http.FileServer(http.Dir("/tmp"))))
-	}()
+	runTestTrackerServer()
 	f, _ := os.Create("/tmp/source")
 	f.WriteString("hello,world")
 	f.Close()
