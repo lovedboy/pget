@@ -187,12 +187,23 @@ func TestDownload_downloadBatch2(t *testing.T) {
 	defer os.Remove(dst)
 	d := NewDownload("http://localhost:33345/source", "", dst, 1, "", 11, false, 0, 3)
 	d.getSize()
-	assert.Equal(t, d.size, int64(11))
 	d.genBatch()
 	err := d.downloadBatch(d.sourceURL, 0)
 	assert.NoError(t, err)
 	buf, _ := ioutil.ReadFile(dst)
 	assert.Equal(t, string(buf), "hello,world")
+}
+
+func TestDownload_getSize(t *testing.T) {
+	runTestTrackerServer()
+	f, _ := os.Create("/tmp/source")
+	f.WriteString("hello,world")
+	f.Close()
+	defer os.Remove("/tmp/source")
+	dst := "/tmp/pget"
+	d := NewDownload("http://localhost:33345/source", "", dst, 1, "", 11, false, 0, 3)
+	d.getSize()
+	assert.Equal(t, d.size, int64(11))
 }
 
 func TestDownload_Start(t *testing.T) {
