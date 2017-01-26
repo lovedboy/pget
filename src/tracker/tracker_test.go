@@ -114,5 +114,4 @@ func TestTrackerHelper_PutPeer(t *testing.T) {
 	peers := gt.sourceBatchMap[th.SourceURL][100][100]
 	assert.Equal(t, len(peers), 1)
 	assert.Contains(t, peers[0], "12345")
-
 }

@@ -46,7 +46,7 @@ rpm:
 	done
 	echo "";\
 	fpm -s dir -t rpm -n "pget" -v ${GITTAG}  usr/local;\
-	rm -rf usr/local;\
+	rm -rf usr/;\
 	
 		
 
