@@ -39,5 +39,15 @@ build:
 	done
 	echo ==================================; \
 
+rpm:
+	mkdir -p usr/local/bin; \
+	for m in $(BIN); do \
+		cd $(PWD)/cmd && go build ${LDFLAGS} -o ../usr/local/bin/$$m $$m.go; \
+	done
+	echo "";\
+	fpm -s dir -t rpm -n "pget" -v ${GITTAG}  usr/local;\
+	rm -rf usr/local;\
+	
+		
 
 

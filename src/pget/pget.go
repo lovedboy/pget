@@ -319,7 +319,7 @@ func (d *download) parseRange(rangeHeader string) (batch int64, err error) {
 
 func (d *download) httpServer() {
 
-	srv := &http.Server{Addr: "0:0", Handler: d}
+	srv := &http.Server{Addr: ":0", Handler: d}
 
 	ln, err := net.Listen("tcp", srv.Addr)
 	if err != nil {
