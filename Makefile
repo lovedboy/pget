@@ -32,9 +32,10 @@ fmt:
 	done
 
 build:
+	mkdir -p bin;\
 	echo ==================================; \
 	for m in $(BIN); do \
-		cd $(PWD)/cmd && go build ${LDFLAGS} --race -o $$m $$m.go; \
+		cd $(PWD)/cmd && go build ${LDFLAGS} --race -o ../bin/$$m $$m.go; \
 	done
 	echo ==================================; \
 
