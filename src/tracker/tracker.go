@@ -89,8 +89,11 @@ func (t *track) Server() {
 	http.HandleFunc("/", t.serverHTTP)
 	g.Infof("will listen at:%s ...\n", t.addr)
 	go func() {
-		time.Sleep(time.Second * EXPITE_TTL)
-		t.deleteSource()
+		for {
+
+			time.Sleep(time.Second * EXPITE_TTL)
+			t.deleteSource()
+		}
 	}()
 	g.Fatal(http.ListenAndServe(t.addr, nil))
 }

@@ -70,20 +70,26 @@ type download struct {
 	// upload rate limit
 	uploadRateLimit *ratelimit.Bucket
 	uploadRate      int64
+	// upload concurrent
+	uploadConcurrent int
+	// current upload conn
+	curUploadConn int
 }
 
-func NewDownload(sourceURL, trackerURL, dst string, concurrent int, batchSize int64, upload bool, uploadTime int) *download {
+func NewDownload(sourceURL, trackerURL, dst string, concurrent int, md5 string, batchSize int64, upload bool, uploadTime int, uploadConcurrent int) *download {
 	d := &download{
-		sourceURL:   sourceURL,
-		trackerURL:  trackerURL,
-		dst:         dst,
-		concurrent:  concurrent,
-		wg:          sync.WaitGroup{},
-		batchSize:   batchSize,
-		closeServer: make(chan bool),
-		httpWg:      sync.WaitGroup{},
-		upload:      upload,
-		uploadTime:  uploadTime,
+		sourceURL:        sourceURL,
+		trackerURL:       trackerURL,
+		dst:              dst,
+		concurrent:       concurrent,
+		md5:              md5,
+		wg:               sync.WaitGroup{},
+		batchSize:        batchSize,
+		closeServer:      make(chan bool),
+		httpWg:           sync.WaitGroup{},
+		upload:           upload,
+		uploadTime:       uploadTime,
+		uploadConcurrent: uploadConcurrent,
 	}
 	if d.trackerURL != "" && d.upload {
 		d.th = &tracker.TrackerHelper{SourceURL: d.sourceURL, TrackerURL: d.trackerURL}
@@ -110,6 +116,17 @@ func (d *download) Start() {
 		d.httpServer()
 	}
 	d.dispatch()
+	if d.md5 != "" {
+		md5, err := MD5sum(d.dst)
+		if err != nil {
+			g.Fatal(err)
+		}
+		if strings.ToLower(md5) != strings.ToLower(d.md5) {
+			g.Fatal("md5 verify fail")
+		} else {
+			g.Infof("md5 verify pass")
+		}
+	}
 	g.Info("download finish")
 	if d.th != nil {
 		go func() {
@@ -324,15 +341,25 @@ func (d *download) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 	}
 
-	d.httpWg.Add(1)
-	defer d.httpWg.Done()
-
-	if d.uploadRateLimit != nil && d.uploadRateLimit.Available() < d.uploadRate/3 {
-		g.Warning("i'm full, so return 500")
+	d.Lock()
+	if d.curUploadConn < d.uploadConcurrent {
+		d.curUploadConn += 1
+		d.Unlock()
+	} else {
+		d.Unlock()
+		g.Warningf("upload conn is greater than upload concurrent:%d", d.uploadConcurrent)
 		w.WriteHeader(500)
-		w.Write([]byte("i'm full"))
+		w.Write([]byte("upload conn is full"))
 		return
 	}
+
+	d.httpWg.Add(1)
+	defer func() {
+		d.httpWg.Done()
+		d.Lock()
+		d.curUploadConn -= 1
+		d.Unlock()
+	}()
 
 	w.Header().Set("Content-type", "application/octet-stream")
 	rangeHeader := r.Header.Get("Range")

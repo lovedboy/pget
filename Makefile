@@ -4,6 +4,11 @@ export GOPATH=$(PWD)
 MODULES := pget tracker logger
 BIN := pget tracker
 
+GITTAG=`git describe --tags`
+BUILD_TIME=`date +%FT%T%z`
+# Setup the -ldflags option for go build here, interpolate the variable values
+LDFLAGS=-ldflags "-X main.GitTag=${GITTAG} -X main.BuildTime=${BUILD_TIME}"
+
 vendor:
 	for m in $(MODULES) ; do \
 	cd src/$$m && go get -insecure -v && cd -;\
@@ -29,7 +34,7 @@ fmt:
 build:
 	echo ==================================; \
 	for m in $(BIN); do \
-		cd $(PWD)/cmd && go build --race -o $$m $$m.go; \
+		cd $(PWD)/cmd && go build ${LDFLAGS} --race -o $$m $$m.go; \
 	done
 	echo ==================================; \
 
