@@ -1,9 +1,7 @@
 package tracker
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"logger"
 	"net/http"
 	"strconv"
@@ -11,8 +9,6 @@ import (
 	"time"
 
 	"strings"
-
-	"gopkg.in/bufio.v1"
 )
 
 const (
@@ -150,73 +146,4 @@ func (t *track) serverHTTP(w http.ResponseWriter, r *http.Request) {
 	g.Debug("unsuported method")
 	w.WriteHeader(500)
 	w.Write([]byte("invalid method"))
-}
-
-type TrackerHelper struct {
-	SourceURL  string
-	TrackerURL string
-}
-
-func (t *TrackerHelper) PutPeer(port string, bat int64, bat_size int64) (err error) {
-	req, err := http.NewRequest("PUT", t.TrackerURL, nil)
-	if err != nil {
-		return
-	}
-	q := req.URL.Query()
-	q.Add("source", t.SourceURL)
-	q.Add("port", port)
-	q.Add("batch", fmt.Sprintf("%d", bat))
-	q.Add("batch_size", fmt.Sprintf("%d", bat_size))
-	req.URL.RawQuery = q.Encode()
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return
-	}
-
-	defer resp.Body.Close()
-	resp_body, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("http code is %s, body is %s", resp.StatusCode, resp_body))
-	}
-	return
-}
-
-func (t *TrackerHelper) GetPeer(bat int64, bat_size int64) (peers []string, err error) {
-	req, err := http.NewRequest("GET", t.TrackerURL, nil)
-	if err != nil {
-		return []string{}, err
-	}
-	q := req.URL.Query()
-	q.Add("source", t.SourceURL)
-	q.Add("batch", fmt.Sprintf("%d", bat))
-	q.Add("batch_size", fmt.Sprintf("%d", bat_size))
-	req.URL.RawQuery = q.Encode()
-
-	client := &http.Client{}
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		return []string{}, err
-	}
-	defer resp.Body.Close()
-	resp_body, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != 200 {
-		return []string{}, errors.New(fmt.Sprintf("http code is %s, body is %s", resp.StatusCode, resp_body))
-	}
-	buf := bufio.NewBuffer(resp_body)
-	for {
-		peer, err := buf.ReadString('\n')
-		if err != nil {
-			break
-		}
-		peers = append(peers, strings.TrimSpace(peer))
-	}
-	return peers, nil
 }

@@ -74,6 +74,9 @@ type download struct {
 	uploadConcurrent int
 	// current upload conn
 	curUploadConn int
+	// http header
+	downloadRequestHeader [][2]string
+	trackerRequestHeader  [][2]string
 }
 
 func NewDownload(sourceURL, trackerURL, dst string, concurrent int, md5 string, batchSize int64, upload bool, uploadTime int, uploadConcurrent int) *download {
@@ -107,9 +110,38 @@ func (d *download) SetUploadRate(n int64) {
 	d.uploadRateLimit = ratelimit.NewBucketWithRate(float64(n), n)
 }
 
+func (d *download) SetTrackerRequestHeader(params []string) {
+	if d.th == nil {
+		g.Warning("dont't set tracker or disable upload")
+		return
+	}
+	for _, param := range params {
+		header := strings.Split(param, ":")
+		if len(header) != 2 {
+			g.Warningf("invalid header:%s", param)
+			continue
+		}
+		d.trackerRequestHeader = append(d.trackerRequestHeader, [2]string{header[0], header[1]})
+
+	}
+	d.th.RequestHeader = d.trackerRequestHeader
+}
+
+func (d *download) SetDownloadRequestHeader(params []string) {
+	for _, param := range params {
+		header := strings.Split(param, ":")
+		if len(header) != 2 {
+			g.Warningf("invalid header:%s", param)
+			continue
+		}
+		d.downloadRequestHeader = append(d.downloadRequestHeader, [2]string{header[0], header[1]})
+
+	}
+}
+
 func (d *download) Start() {
 	if err := d.getSize(); err != nil {
-		g.Fatal(err)
+		g.Fatalf("get file size error:%v", err)
 	}
 	d.genBatch()
 	if d.th != nil {
@@ -201,11 +233,23 @@ func (d *download) dispatch() {
 	close(batchChan)
 }
 
+func (d *download) setHeader(req *http.Request) *http.Request {
+	for _, k := range d.downloadRequestHeader {
+		if strings.EqualFold(k[0], "host") {
+			req.Host = k[1]
+		} else {
+			req.Header.Add(k[0], k[1])
+		}
+	}
+	return req
+}
+
 func (d *download) getSize() (err error) {
 	req, err := http.NewRequest("HEAD", d.sourceURL, nil)
 	if err != nil {
 		return
 	}
+	req = d.setHeader(req)
 	hc := &http.Client{Timeout: time.Duration(time.Second * HEAD_TIMEOUT)}
 	res, err := hc.Do(req)
 	if err != nil {
@@ -214,7 +258,7 @@ func (d *download) getSize() (err error) {
 	defer res.Body.Close()
 	io.Copy(ioutil.Discard, res.Body)
 	if res.StatusCode != 200 {
-		return errors.New("response http code should be 200")
+		return errors.New(fmt.Sprintf("response http code should be 200, but real is %d", res.StatusCode))
 	}
 	d.size = res.ContentLength
 	return
@@ -259,6 +303,7 @@ func (d *download) downloadBatch(url string, batch int64) (err error) {
 	if err != nil {
 		return
 	}
+	req = d.setHeader(req)
 	start, end := d.genRange(batch)
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 	hc := &http.Client{Timeout: time.Duration(time.Second * BATCH_TIMEOUT)}
@@ -268,7 +313,7 @@ func (d *download) downloadBatch(url string, batch int64) (err error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 206 {
-		return errors.New("response http code should be 206")
+		return errors.New(fmt.Sprintf("response http code should be 206, but real is %d", res.StatusCode))
 	}
 	f, err := os.OpenFile(d.dst, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {

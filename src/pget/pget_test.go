@@ -230,3 +230,21 @@ func TestDownload_Start(t *testing.T) {
 	}
 
 }
+
+func TestDownload_SetDownloadRequestHeader(t *testing.T) {
+	dst := "/tmp/test"
+	d := NewDownload("http://localhost:33345/source", "", dst, 1, "", 11, false, 0, 3)
+	d.SetDownloadRequestHeader([]string{"Host:127.0.0.1", "invalid", "User-Agent:pget"})
+	assert.Len(t, d.downloadRequestHeader, 2)
+	assert.Equal(t, d.downloadRequestHeader[0], [2]string{"Host", "127.0.0.1"})
+	assert.Equal(t, d.downloadRequestHeader[1], [2]string{"User-Agent", "pget"})
+}
+
+func TestDownload_SetTrackerRequestHeader(t *testing.T) {
+	dst := "/tmp/test"
+	d := NewDownload("http://localhost:33345/source", "http://tracker.com", dst, 1, "", 11, true, 0, 3)
+	d.SetTrackerRequestHeader([]string{"Host:127.0.0.1", "invalid", "User-Agent:pget"})
+	assert.Len(t, d.th.RequestHeader, 2)
+	assert.Equal(t, d.th.RequestHeader[0], [2]string{"Host", "127.0.0.1"})
+	assert.Equal(t, d.th.RequestHeader[1], [2]string{"User-Agent", "pget"})
+}

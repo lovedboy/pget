@@ -13,8 +13,21 @@ var (
 	BuildTime = "2000-01-01T00:00:00+0800"
 )
 
+type arrayHeader []string
+
+func (i *arrayHeader) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *arrayHeader) String() string {
+	return fmt.Sprintf("%v", *i)
+}
+
 func main() {
 
+	var downloadHeader arrayHeader
+	var trackerHeader arrayHeader
 	source := flag.String("s", "", "source url")
 	tracker := flag.String("t", "", "tracker url")
 	dst := flag.String("d", "", "the dst path")
@@ -28,6 +41,8 @@ func main() {
 	uploadRate := flag.Int64("upload-rate", 0, "upload rate limit, unit is Mb")
 	uploadConcurrent := flag.Int("upload-concurrent", 3, "upload concurrent")
 	version := flag.Bool("v", false, "version")
+	flag.Var(&downloadHeader, "download-header", "headers for download http request")
+	flag.Var(&trackerHeader, "tracker-header", "headers for tracker http request")
 	flag.Parse()
 
 	if *version {
@@ -55,6 +70,9 @@ func main() {
 	if *uploadRate > 0 {
 		p.SetUploadRate(*uploadRate * 1024 * 1024 / 8)
 	}
+	fmt.Println(downloadHeader)
+	p.SetDownloadRequestHeader(downloadHeader)
+	p.SetTrackerRequestHeader(trackerHeader)
 	p.Start()
 
 }
