@@ -135,7 +135,12 @@ func (t *track) serverHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("invalid peer"))
 			return
 		}
-		ip := strings.Split(r.RemoteAddr, ":")[0]
+		var ip string
+		if r.Header.Get("X-Real-IP") != "" {
+			ip = r.Header.Get("X-Real-IP")
+		} else {
+			ip = strings.Split(r.RemoteAddr, ":")[0]
+		}
 		peer := fmt.Sprintf("http://%s:%s", ip, port)
 		t.addPeer(source, peer, bat, bat_size)
 		w.WriteHeader(200)
