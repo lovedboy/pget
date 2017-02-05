@@ -233,7 +233,7 @@ func (d *download) dispatch() {
 	close(batchChan)
 }
 
-func (d *download) setHeader(req *http.Request) *http.Request {
+func (d *download) setHeader(req *http.Request) {
 	for _, k := range d.downloadRequestHeader {
 		if strings.EqualFold(k[0], "host") {
 			req.Host = k[1]
@@ -241,7 +241,6 @@ func (d *download) setHeader(req *http.Request) *http.Request {
 			req.Header.Add(k[0], k[1])
 		}
 	}
-	return req
 }
 
 func (d *download) getSize() (err error) {
@@ -249,7 +248,7 @@ func (d *download) getSize() (err error) {
 	if err != nil {
 		return
 	}
-	req = d.setHeader(req)
+	d.setHeader(req)
 	hc := &http.Client{Timeout: time.Duration(time.Second * HEAD_TIMEOUT)}
 	res, err := hc.Do(req)
 	if err != nil {
@@ -303,7 +302,7 @@ func (d *download) downloadBatch(url string, batch int64) (err error) {
 	if err != nil {
 		return
 	}
-	req = d.setHeader(req)
+	d.setHeader(req)
 	start, end := d.genRange(batch)
 	req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 	hc := &http.Client{Timeout: time.Duration(time.Second * BATCH_TIMEOUT)}
