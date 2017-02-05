@@ -4,10 +4,12 @@ export GOPATH=$(PWD)
 MODULES := pget tracker logger
 BIN := pget tracker
 
-GITTAG=`git describe --tags`
-BUILD_TIME=`date +%FT%T%z`
+GITTAG := `git describe --tags`
+VERSION := `git describe --abbrev=0 --tags`
+RELEASE := `git rev-list $(shell git describe --abbrev=0 --tags).. --count`
+BUILD_TIME := `date +%FT%T%z`
 # Setup the -ldflags option for go build here, interpolate the variable values
-LDFLAGS=-ldflags "-X main.GitTag=${GITTAG} -X main.BuildTime=${BUILD_TIME}"
+LDFLAGS := -ldflags "-X main.GitTag=${GITTAG} -X main.BuildTime=${BUILD_TIME}"
 
 vendor:
 	for m in $(MODULES) ; do \
@@ -45,7 +47,7 @@ rpm:
 		cd $(PWD)/cmd && go build ${LDFLAGS} -o ../usr/local/bin/$$m $$m.go; \
 	done
 	echo "";\
-	fpm -s dir -t rpm -n "pget" -v ${GITTAG}  usr/local;\
+	fpm -s dir -t rpm -n "pget" -v ${VERSION} --iteration ${RELEASE}  usr/local;\
 	rm -rf usr/;\
 	
 		
