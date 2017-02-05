@@ -94,7 +94,7 @@ func TestDownload_announce(t *testing.T) {
 }
 
 func TestDownload_getPeers(t *testing.T) {
-	d := NewDownload("http://localhost/", "http://localhost", "", 1, "", 0, true, 0, 3)
+	d := NewDownload("http://localhost/", "http://localhost:11111", "", 1, "", 0, true, 0, 3)
 	peers := d.getPeers(1)
 	assert.Len(t, peers, 1)
 	assert.Equal(t, peers[0], "http://localhost/")
