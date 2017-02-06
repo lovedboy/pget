@@ -144,7 +144,7 @@ func (t *track) serverHTTP(w http.ResponseWriter, r *http.Request) {
 		peer := fmt.Sprintf("http://%s:%s", ip, port)
 		t.addPeer(source, peer, bat, bat_size)
 		w.WriteHeader(200)
-		g.Debugf("%s have batch:%d", peer, bat)
+		g.Debugf("%s have batch:%d for %s", peer, bat, source)
 		return
 
 	}
