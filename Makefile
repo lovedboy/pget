@@ -2,7 +2,7 @@ export GOPATH=$(PWD)
 
 
 MODULES := pget tracker logger
-BIN := pget tracker
+BIN := pget tracker static_server
 
 GITTAG := `git describe --tags`
 VERSION := `git describe --abbrev=0 --tags`
